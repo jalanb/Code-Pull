@@ -3,7 +3,7 @@ if !has('python')
 endif
 
 command! -nargs=1 Pull call PullCode(<f-args>)
-function! PullCode(description)
+function! PullCode(search_terms)
 
 
 python <<_EOF_
@@ -41,9 +41,9 @@ def removeCommentOnlyCode(codeGroups):
 class CodeRetriever:
 
 
-	def __init__(self, initKeywords, language):
+	def __init__(self, search_terms, language):
 		"""Initialize the class with keywords and language"""
-		self.keywords = initKeywords
+		self.search_terms = search_terms
 		language_codes = {'javascript': 22,
 			'swift':137,
 			'python':19,
@@ -93,7 +93,7 @@ class CodeRetriever:
 			return word.lower() not in unwanted
 
 		#delete all general terms from the keywords
-		self.keywords = [w for w in self.keywords if wanted(w)]
+		self.search_terms = [w for w in self.search_terms if wanted(w)]
 
 		#compile the lines into code segments
 		codeGroups = []
@@ -105,7 +105,7 @@ class CodeRetriever:
 		keywordCount = 0
 		#find the code segment that best matches our needs, based on keywords found in the code
 		for segment in codeGroups:
-			for word in self.keywords:
+			for word in self.search_terms:
 				keywordCount = keywordCount + segment.count(word)
 			highestKeywords.append(keywordCount)
 			keywordCount = 0
@@ -115,7 +115,7 @@ class CodeRetriever:
 	def querySearchCode(self):
 		"""Scrape and grab code from github"""
 
-		params = '+'.join(self.keywords)
+		params = '+'.join(self.search_terms)
 		#params += self.language
 		query = 'https://searchcode.com/api/codesearch_I/'#?q=reverse+string&lan=19'
 		q = {'q':params,
@@ -133,22 +133,15 @@ class CodeRetriever:
 		#if we did, follow the link to the code, and extract the entire method that is there
 
 
-args = vim.eval("a:description")
-
-argsDict = args.split(' ')
 
 vim.command("let r = &filetype")
 
+code_group = CodeRetriever(
+    vim.eval("a:search_terms").split,
+    vim.eval("r")).querySearchCode()
 
-ftype = vim.eval("r")
-
-
-cr = CodeRetriever(argsDict, ftype)
-
-fin = cr.querySearchCode()
-
-codeArr = fin.splitlines()
-vim.command("let ret = \"%s\"" %fin)
+codeArr = code_group.splitlines()
+vim.command("let ret = \"%s\"" % code_group)
 
 _EOF_
 
